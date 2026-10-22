@@ -16,6 +16,8 @@ for(const player of history.players){
  for(let time=Date.parse(last+'T00:00:00Z')+86400000;time<=Date.parse(today+'T00:00:00Z');time+=86400000){
   player.days.push(new Date(time).toISOString().slice(0,10));extended=true;
  }
+ // Today's chart can gain XP between scheduled runs; check it again each run.
+ if(player.days.at(-1)===today&&player.next>=player.days.length){player.next=player.days.length-1;extended=true;}
 }
 if(extended){history.complete=false;history.running=false;await writeFile(historyFile,JSON.stringify(history));}
 const {handleXpRoute,parseBoard,character}=await import('../src/xpAnalytics');

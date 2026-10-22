@@ -14,5 +14,5 @@ for(const range of manifest.ranges){
  assert.ok(rik.timeToMax.hours>0);assert.ok(rik.timeToMax.totalEhp>0);
 }
 const alltime=await Bun.file('dist/data/alltime.json').json();
-assert.equal(alltime.scannedDays,31564);assert.equal(alltime.boards.length,19);
+assert.ok(alltime.scannedDays>=31564);assert.equal(alltime.boards.length,19);
 console.log(JSON.stringify({verified:true,characters:manifest.characters.length,ranges:manifest.ranges,scanDays:alltime.scannedDays}));
