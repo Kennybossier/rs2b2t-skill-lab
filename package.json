@@ -1,0 +1,17 @@
+{
+  "name": "rs2b2t-skill-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun run scripts/build.ts",
+    "refresh": "bun run scripts/refresh.ts",
+    "preview": "bun run scripts/preview.ts",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.23",
+    "typescript": "^5.9.2"
+  }
+}
