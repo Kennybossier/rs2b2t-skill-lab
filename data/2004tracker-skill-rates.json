@@ -492,7 +492,7 @@
         "min_level": 1,
         "max_level": 99,
         "method": "Fire runes",
-        "rate": 18000,
+        "rate": 120000,
         "bonus_skills": []
       }
     ],

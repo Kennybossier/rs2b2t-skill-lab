@@ -15,7 +15,7 @@ test('source overlaps use fastest applicable method and gaps carry preceding rat
     expect(trackerRate('cooking',xpAtLevel(37))).toBe(90000);
     expect(trackerRate('cooking',xpAtLevel(40))).toBe(150000);
     expect(trackerMethods('cooking').find(b=>b.minLevel===35)?.carried).toBe(true);
-    expect(trackerRate('runecraft',0)).toBe(18000);
+    expect(trackerRate('runecraft',0)).toBe(120000);
     expect(trackerRate('herblore',xpAtLevel(78))).toBe(375000);
 });
 test('EHP and remaining training time partition maxing hours; post-99 XP adds only EHP',()=>{
