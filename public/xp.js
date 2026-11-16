@@ -17,6 +17,7 @@ function tableRows(rows,cols) {
 }
 const MAX_XP = 13034431;
 const fmtHours = h => h == null ? '—' : h === 0 ? 'Maxed' : h < 1 ? `${Math.ceil(h * 60)} min` : `${fmt(h,1)} h`;
+const fmtEfficiency = p => p.efficiency == null ? '—' : `${fmt(p.efficiency,1)}%`;
 function getReference(skill) {
     if(snapshot)return snapshot.boards?.find(b=>b.skill===skill)?.baseline??null;
     return player?.referenceRates?.[skill]??null;
@@ -40,8 +41,12 @@ function render() {
     $('#alltime-status').textContent=allTime?.startedAt?`All-time scan: ${allTime.phase} · ${allTime.discoveredSkills}/19 skills · ${allTime.overallPlayers?.length||0}/40 overall total-level players included · ${allTime.playerCount} skill/player pairs · ${allTime.scannedDays} historical player-days checked${allTime.unavailableDays?' · '+allTime.unavailableDays+' days without hourly data':''}${allTime.error?' · '+allTime.error:''}`:'Start the all-time scan to compare observed hourly records. Progress is saved and can be resumed.';
     $('#coverage').textContent=snapshot.running?'Collecting':'Sampled players';
     $('#totals').className='';
-    $('#totals').innerHTML=snapshot.leaders.length?tableRows(snapshot.leaders.map((p,i)=>`<tr><td>${i+1}</td><td>${link(p)}</td><td>${p.skillsMaxed} / 19</td><td class="ehp">${fmtHours(p.hoursToMax)}</td></tr>`),['#','Character','99s','Hours left']):'<p class="loading">Waiting for character data…</p>';
-    $('#rank-note').textContent=`Estimated among ${snapshot.playerCount} inspected characters. Lower hours means closer to all 99s. Efficiency rates use the linked 2004Tracker table and do not depend on scan progress.`;
+    $('#totals').innerHTML=snapshot.leaders.length?tableRows(snapshot.leaders.map((p,i)=>`<tr><td>${i+1}</td><td>${link(p)}</td><td>${p.skillsMaxed} / 19</td><td class="ehp">${fmtHours(p.hoursToMax)}</td><td>${fmtEfficiency(p)}</td></tr>`),['#','Character','99s','Hours left','Efficiency']):'<p class="loading">Waiting for character data…</p>';
+    $('#rank-note').textContent=`Estimated among ${snapshot.playerCount} inspected characters. Efficiency uses lifetime EHP and hours online.`;
+    const efficiencyLeaders = snapshot.efficiencyLeaders ?? [];
+    $('#efficiency-leaders').innerHTML=efficiencyLeaders.length
+        ? tableRows(efficiencyLeaders.map((p,i)=>`<tr><td>${i+1}</td><td>${link(p)}</td><td>${fmt(p.total,1)}</td><td>${fmt(p.hoursOnline,1)}</td><td class="ehp">${fmtEfficiency(p)}</td></tr>`),['#','Character','EHP earned','Hours online','Efficiency'])
+        : '<p class="muted">Waiting for a published snapshot with playtime.</p>';
     const scores=scoreHourlyRecords(allTime?.boards??[]).slice(0,10);
     $('#xp-scoreboard').innerHTML=scores.length?tableRows(scores.map((p,i)=>`<tr><td>${i+1}</td><td>${link(p)}</td><td class="ehp">${p.points}</td></tr>`),['#','Character','Points']):'<p class="muted">No hourly records in this snapshot yet.</p>';
     const expanded=new Set([...document.querySelectorAll('.skill-card details[open]')].map(d=>d.closest('article').dataset.skill));

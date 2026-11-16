@@ -6,7 +6,7 @@ export const SKILLS = ['attack','defence','strength','hitpoints','ranged','praye
 export const skillName = (s: string) => s === 'runecraft' ? 'Runecrafting' : s[0].toUpperCase() + s.slice(1);
 export const MAX_SKILL_XP=13_034_431;
 export type Stat = { skill: string; level: number; xp: number; gains: number | null; rate: number | null; hours: number | null };
-export type Player = { name: string; slug: string; skills: Stat[] };
+export type Player = { name: string; slug: string; skills: Stat[]; hoursOnline?: number | null };
 type Row = Stat & { name: string; slug: string };
 type RecordHour = { xp: number; from: number; to: number; samples: number };
 export type XpPoint = {t:number;xp:number};
@@ -46,7 +46,9 @@ export function parsePlayer(html: string, slug: string): Player {
         return [{skill,level,xp,gains,rate:number(c[5]),hours:number(c[6])}];
     });
     if (skills.length !== SKILLS.length) throw new Error('Incomplete character skill data.');
-    return {name:decode(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] ?? slug),slug,skills};
+    const online = /<span\b[^>]*>\s*Hours online\s*<\/span>\s*<b\b[^>]*>([\s\S]*?)<\/b>/i.exec(html)?.[1];
+    return {name:decode(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(html)?.[1] ?? slug),slug,skills,
+        hoursOnline:online === undefined ? null : number(online)};
 }
 export function referenceRate(rows: Stat[]) {
     // One-hour minimum excludes tiny rounded denominators. Weighted mean, not mean of rates.
@@ -146,7 +148,7 @@ export async function character(name:string,range:string) {
     const slug=cleanName(name);
     if(!/^[a-z0-9_]{1,12}$/.test(slug))throw new Error('Use a character name of 1–12 letters, numbers or spaces.');
     const key=`${range}:${slug}`,saved=characterCache.get(key);
-    if(saved&&Date.now()-saved.time<15*60000)return saved.player;
+    if(saved&&saved.player.hoursOnline!==undefined&&Date.now()-saved.time<15*60000)return saved.player;
     const player=parsePlayer(await source(`/progress/${slug}?range=${range}`),slug);
     characterCache.set(key,{time:Date.now(),player});
     if(characterCache.size>2500)characterCache.delete(characterCache.keys().next().value!);
@@ -167,11 +169,16 @@ function persist(){
     try{mkdirSync(cacheDir,{recursive:true});writeFileSync(cacheFile+'.tmp',JSON.stringify({version:2,snapshots:[...snapshots.values()].filter(s=>!s.running)}));renameSync(cacheFile+'.tmp',cacheFile);}
     catch(error){console.warn('XP snapshot could not be saved:',error instanceof Error?error.message:String(error));}
 }
-function rankPlayers(s:Snapshot) {
-    return s.players.map(p=>{
+export function rankPlayers(players:Player[]) {
+    const ranked = players.map(p=>{
         const estimate=trackerEstimate(p.skills);
-        return {name:p.name,slug:p.slug,total:estimate.totalEhp,gained:estimate.gainedEhp,hoursToMax:estimate.hours,skillsMaxed:estimate.skillsMaxed,remainingXp:estimate.remainingXp};
+        const hoursOnline = p.hoursOnline != null && Number.isFinite(p.hoursOnline) && p.hoursOnline > 0 ? p.hoursOnline : null;
+        const efficiency = hoursOnline !== null && estimate.missingSkills.length === 0 ? 100 * estimate.totalEhp / hoursOnline : null;
+        return {name:p.name,slug:p.slug,total:estimate.totalEhp,gained:estimate.gainedEhp,hoursToMax:estimate.hours,skillsMaxed:estimate.skillsMaxed,remainingXp:estimate.remainingXp,hoursOnline,efficiency};
     }).filter(p=>p.hoursToMax!==null).sort((a,b)=>a.hoursToMax!-b.hoursToMax!||a.name.localeCompare(b.name));
+    const efficiencyLeaders = ranked.filter(p=>p.efficiency!==null)
+        .sort((a,b)=>b.efficiency!-a.efficiency!||b.total-a.total||a.name.localeCompare(b.name)).slice(0,10);
+    return {leaders:ranked.slice(0,10),efficiencyLeaders};
 }
 async function collect(s:Snapshot) {
     try {
@@ -415,6 +422,6 @@ export async function handleXpRoute(req:Request):Promise<Response> {
             void scanRecords(s,10);
         }
         const rates=efficiencyRateMap();
-        return reply({...s,players:undefined,boards:s.boards.map(b=>({...b,baseline:rates[b.skill],methods:trackerMethods(b.skill),leaders:b.leaders.map(p=>({...p,...trackerSkill(b.skill,p.xp,p.gains)})),referenceKind:'2004tracker'})),leaders:rankPlayers(s).slice(0,10),playerCount:s.players.length,verified:false,unseenUpperBound:null,referenceSource:RATE_SOURCE,referenceProvisional:false});
+        return reply({...s,players:undefined,boards:s.boards.map(b=>({...b,baseline:rates[b.skill],methods:trackerMethods(b.skill),leaders:b.leaders.map(p=>({...p,...trackerSkill(b.skill,p.xp,p.gains)})),referenceKind:'2004tracker'})),...rankPlayers(s.players),playerCount:s.players.length,verified:false,unseenUpperBound:null,referenceSource:RATE_SOURCE,referenceProvisional:false});
     }catch(error){return reply({error:error instanceof Error?error.message:String(error)},502);}
 }

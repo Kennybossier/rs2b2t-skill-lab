@@ -42,8 +42,13 @@ jobs:
           key: public-xp-${{ github.run_id }}
           restore-keys: public-xp-
       - name: Refresh player snapshots and resume historical scan
-        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh)
-        run: bun run refresh
+        if: github.event_name == 'push' || github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.refresh)
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" != push ] || ! bun -e 'const file=Bun.file("state/xp-analytics-cache.json"); if (!await file.exists()) process.exit(1); const {snapshots}=await file.json(); if (!snapshots.length || !snapshots.every(s=>s.players.some(p=>Number.isFinite(p.hoursOnline)&&p.hoursOnline>0))) process.exit(1);'; then
+            bun run refresh
+          fi
       - run: bun run build
       - name: Save collected public data
         uses: actions/cache/save@v4
