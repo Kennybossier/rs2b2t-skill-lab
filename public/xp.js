@@ -1,3 +1,5 @@
+import {scoreHourlyRecords} from './xp-scoreboard.js';
+
 const $ = s => document.querySelector(s);
 const fmt = (n,d=0) => n == null || !Number.isFinite(n) ? '—' : n.toLocaleString('en-GB',{maximumFractionDigits:d,minimumFractionDigits:d});
 const esc = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -40,6 +42,8 @@ function render() {
     $('#totals').className='';
     $('#totals').innerHTML=snapshot.leaders.length?tableRows(snapshot.leaders.map((p,i)=>`<tr><td>${i+1}</td><td>${link(p)}</td><td>${p.skillsMaxed} / 19</td><td class="ehp">${fmtHours(p.hoursToMax)}</td></tr>`),['#','Character','99s','Hours left']):'<p class="loading">Waiting for character data…</p>';
     $('#rank-note').textContent=`Estimated among ${snapshot.playerCount} inspected characters. Lower hours means closer to all 99s. Efficiency rates use the linked 2004Tracker table and do not depend on scan progress.`;
+    const scores=scoreHourlyRecords(allTime?.boards??[]).slice(0,10);
+    $('#xp-scoreboard').innerHTML=scores.length?tableRows(scores.map((p,i)=>`<tr><td>${i+1}</td><td>${link(p)}</td><td class="ehp">${p.points}</td></tr>`),['#','Character','Points']):'<p class="muted">No hourly records in this snapshot yet.</p>';
     const expanded=new Set([...document.querySelectorAll('.skill-card details[open]')].map(d=>d.closest('article').dataset.skill));
     $('#skills').innerHTML=skills.map((skill,i)=>{
         const b=snapshot.boards.find(b=>b.skill===skill),history=allTime?.boards?.find(b=>b.skill===skill),rate=getReference(skill);
